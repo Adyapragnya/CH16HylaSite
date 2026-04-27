@@ -521,10 +521,6 @@ function VesselCard({ vessel, onClick }) {
         </div>
       )}
 
-      {/* Row 5: Cert bars */}
-      {svcTypes.includes('LSA') && <CertBar svcType="LSA" vessel={vessel} />}
-      {svcTypes.includes('FFA') && <CertBar svcType="FFA" vessel={vessel} />}
-
       {/* Row 6: FROM / AT / NEXT */}
       <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
         <div>
