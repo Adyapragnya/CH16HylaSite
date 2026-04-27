@@ -1,0 +1,43 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+    container_name: ch16-backend
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - ch16-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  scheduler:
+    build:
+      context: ./scheduler
+    container_name: ch16-scheduler
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - ch16-net
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ch16-frontend
+    restart: unless-stopped
+    ports:
+      - "8016:80"
+    networks:
+      - ch16-net
+    depends_on:
+      - backend
+
+networks:
+  ch16-net:
+    driver: bridge

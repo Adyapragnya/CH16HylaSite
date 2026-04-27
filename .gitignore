@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Environment
+.env
+
+# Zip archives
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Non-portal directories
+ch16-gh-pages/
+ch16-scrapers/
+portvesselsgeofence/
+
+# Claude Code internal
+.claude/

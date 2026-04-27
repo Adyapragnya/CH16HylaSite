@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens (from ch16-asmoloobhoy reference) ─────────── */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --primary: 172 83% 26%;      /* #0B7C6E */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 98%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 166 76% 97%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 6 63% 46%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 172 83% 26%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222 30% 7%;
+  --foreground: 215 25% 91%;
+  --card: 216 22% 11%;
+  --card-foreground: 215 25% 91%;
+  --primary: 170 83% 35%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 215 25% 91%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 25% 53%;
+  --border: 217 33% 20%;
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; }
+
+.font-heading { font-family: 'Syne', sans-serif; }
+.font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Custom scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: hsl(var(--muted)); }
+::-webkit-scrollbar-thumb { background: #0B7C6E; border-radius: 3px; }
+
+/* ── Spinner ───────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  border: 2px solid hsl(var(--border));
+  border-top-color: #0B7C6E;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Journey stepper ───────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(11,124,110,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(11,124,110,0); }
+}
+.stage-active { animation: pulse-ring 1.8s ease-in-out infinite; }
+
+/* ── Fade-in ───────────────────────────────────────────────────── */
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.fade-in { animation: fadeIn 0.25s ease; }
+
+/* ── Vessel card hover ─────────────────────────────────────────── */
+.vessel-card { transition: border-color 0.15s, box-shadow 0.15s; }
+.vessel-card:hover { border-color: #0B7C6E; box-shadow: 0 2px 12px rgba(11,124,110,0.12); }
+.vessel-card.selected { border-color: #0B7C6E; background: hsl(var(--accent)); }
