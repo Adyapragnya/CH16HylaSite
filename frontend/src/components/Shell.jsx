@@ -54,7 +54,7 @@ export default function Shell() {
   const urgentItems = notifItems.filter(n => n.urgent)
   const infoItems   = notifItems.filter(n => !n.urgent)
 
-  const isDark = tab === 'ops' || tab === 'compliance'
+  const isDark = tab === 'ops'
 
   const handleLogout = () => { logout(); navigate('/login') }
 
