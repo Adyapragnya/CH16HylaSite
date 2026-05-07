@@ -434,7 +434,7 @@ function VesselCard({ vessel, onClick }) {
   return (
     <div
       onClick={onClick}
-      className={`bg-card border border-border border-l-4 ${borderCls} rounded-lg p-4 cursor-pointer hover:shadow-md transition-all hover:border-[#0B7C6E]/30 mb-3`}
+      className={`bg-card border border-border border-l-4 ${borderCls} rounded-lg p-4 cursor-pointer hover:shadow-md transition-all hover:border-[#0B7C6E]/30 mb-3 overflow-hidden min-w-0`}
     >
       {/* Row 1: Name + relationship */}
       <div className="flex items-start justify-between mb-1">
@@ -502,8 +502,8 @@ function VesselCard({ vessel, onClick }) {
               </span>
             )}
             {vessel.lat && vessel.lon && (
-              <span className="font-mono text-[9px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded">
-                {Number(vessel.lat).toFixed(4)}°, {Number(vessel.lon).toFixed(4)}°
+              <span className="hidden font-mono text-[9px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded sm:inline">
+                {Number(vessel.lat).toFixed(3)}°, {Number(vessel.lon).toFixed(3)}°
                 {vessel.speed != null && <span className="ml-1 not-italic font-sans text-blue-400">{vessel.speed}kn</span>}
               </span>
             )}
@@ -672,7 +672,7 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
   return (
     <div className={
       mobileDrawer
-        ? 'flex h-full flex-col overflow-hidden bg-card'
+        ? 'flex h-full flex-col overflow-hidden bg-white'
         : `${collapsed ? 'w-12' : 'w-56'} hidden md:flex shrink-0 border-r border-border bg-card flex-col overflow-hidden transition-[width] duration-200`
     }>
       {/* Toggle header */}
@@ -1022,7 +1022,7 @@ export default function SalesView() {
         </div>
 
         {/* Vessel list */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {loading ? (
             <div className="flex items-center justify-center py-20"><div className="spinner w-6 h-6" /></div>
           ) : filtered.length ? (
