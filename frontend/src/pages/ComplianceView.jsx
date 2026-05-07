@@ -87,7 +87,7 @@ export default function ComplianceView() {
   const [search,            setSearch]            = useState('')
   const [tab,               setTab]               = useState('certificates')
   const [sidebarCollapsed,  setSidebarCollapsed]  = useState(false)
-  const [certsOnly,         setCertsOnly]         = useState(true)
+  const [certsOnly,         setCertsOnly]         = useState(false)
   // mobile: 'list' shows the sidebar/vessel list, 'detail' shows the cert detail
   const [mobilePanel,       setMobilePanel]       = useState('list')
   // mobile: filter drawer (subset of sidebar)

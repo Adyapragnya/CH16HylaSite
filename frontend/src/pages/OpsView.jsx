@@ -169,12 +169,6 @@ export default function OpsView() {
                       {v.last_port && <span>From: {v.last_port}</span>}
                       {v.class_society && <span className="text-[#0FA390]/80">{v.class_society}</span>}
                     </div>
-                    {/* Cert summary */}
-                    {status !== 'valid' && (
-                      <div className={`mt-2 text-[10px] font-semibold ${status === 'expired' ? 'text-red-400' : status === 'critical' ? 'text-amber-400' : 'text-yellow-400'}`}>
-                        ⚠ Cert {status === 'expired' ? 'EXPIRED' : status === 'critical' ? 'critical (<20d)' : 'expiring (<60d)'}
-                      </div>
-                    )}
                   </div>
                 )
               })}

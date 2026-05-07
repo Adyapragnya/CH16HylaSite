@@ -75,7 +75,7 @@ function SurveyStatusBadge({ status }) {
 }
 
 // ── Vessel detail modal ───────────────────────────────────────────
-function VesselModal({ vessel, onClose, loadingCerts }) {
+function VesselModal({ vessel, onClose, loadingCerts, certLoadError }) {
   const [tab,          setTab]          = useState('certificates')
   const [hoveredStage, setHoveredStage] = useState(null)
   if (!vessel) return null
@@ -314,7 +314,16 @@ function VesselModal({ vessel, onClose, loadingCerts }) {
             </div>
           )}
           {tab === 'certificates' && (
-            certs.length ? (
+            loadingCerts ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <div className="spinner w-6 h-6" />
+              </div>
+            ) : certLoadError ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <ShieldCheck size={32} className="mb-2 opacity-20" />
+                <p className="text-sm">Failed to load certificates</p>
+              </div>
+            ) : certs.length ? (
               <div className="space-y-3">
                 {certs.map((c, i) => {
                   const days     = certDays(c)
@@ -421,7 +430,6 @@ function inferServiceTypes(certs = []) {
 
 // ── Vessel card ───────────────────────────────────────────────────
 function VesselCard({ vessel, onClick }) {
-  const [showOwner, setShowOwner] = useState(false)
   // Use pre-computed fields — no need to iterate certificates in the list view
   const status    = vessel.cert_status || 'none'
   const svcTypes  = vessel.service_types?.length
@@ -496,11 +504,6 @@ function VesselCard({ vessel, onClick }) {
             {vessel.locode && (
               <span className="font-mono text-[9px] font-semibold bg-secondary border border-border px-1.5 py-0.5 rounded text-muted-foreground">{vessel.locode}</span>
             )}
-            {vessel.last_ais_update && (
-              <span className="text-[9px] text-muted-foreground ml-auto">
-                AIS: {new Date(vessel.last_ais_update).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'})}
-              </span>
-            )}
             {vessel.lat && vessel.lon && (
               <span className="hidden font-mono text-[9px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded sm:inline">
                 {Number(vessel.lat).toFixed(3)}°, {Number(vessel.lon).toFixed(3)}°
@@ -542,35 +545,24 @@ function VesselCard({ vessel, onClick }) {
       </div>
 
       {/* Row 7: Owner/manager + powered by */}
-      <div className="mt-2 pt-2 border-t border-border/50" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          {(vessel.ship_owner || vessel.ship_manager) ? (
-            <button
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-[#0B7C6E] transition-colors"
-              onClick={() => setShowOwner(s => !s)}
-            >
-              <FileText size={10} />Owner / Manager Details
-              {showOwner ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-            </button>
-          ) : <span />}
-          <span className="text-[9px] text-muted-foreground/50">⚡ Powered by HYLA</span>
-        </div>
-        {showOwner && (vessel.ship_owner || vessel.ship_manager) && (
-          <div className="mt-2 pl-3 border-l-2 border-[#0B7C6E]/30 space-y-1.5">
+      <div className="mt-2 border-t border-border/50 pt-2">
+        {(vessel.ship_owner || vessel.ship_manager) && (
+          <div className="mb-1.5 flex gap-4 pl-0.5">
             {vessel.ship_owner && (
               <div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Owner</div>
+                <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Owner</div>
                 <div className="text-[11px] font-medium text-foreground">{vessel.ship_owner}</div>
               </div>
             )}
             {vessel.ship_manager && (
               <div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Manager</div>
+                <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Manager</div>
                 <div className="text-[11px] font-medium text-foreground">{vessel.ship_manager}</div>
               </div>
             )}
           </div>
         )}
+        <div className="text-right text-[9px] text-muted-foreground/50">⚡ Powered by HYLA</div>
       </div>
 
       {/* Row 8: Action buttons */}
@@ -853,6 +845,8 @@ export default function SalesView() {
   const [selectedPorts,       setSelectedPorts]       = useState(new Set())
   const [leftCollapsed,       setLeftCollapsed]       = useState(false)
   const [filterDrawerOpen,    setFilterDrawerOpen]    = useState(false)
+  const [sortBy,              setSortBy]              = useState('default') // 'default'|'eta'|'destination'
+  const [certLoadError,       setCertLoadError]       = useState(false)
   const [certFilter,          setCertFilter]          = useState('all')
   const [activeFilter,        setActiveFilter]        = useState('arriving')
   const [timeFilter,          setTimeFilter]          = useState('7d')
@@ -867,14 +861,18 @@ export default function SalesView() {
   const openVesselModal = useCallback(async (v) => {
     setSelectedVessel(v)
     setLoadingModal(true)
+    setCertLoadError(false)
     try {
       const res = await vesselAPI.certificates(v.imo)
       setSelectedVessel(prev => prev?.imo === v.imo
         ? { ...prev, certificates: res.data.certificates || [] }
         : prev
       )
-    } catch (_) {}
-    finally { setLoadingModal(false) }
+    } catch {
+      setCertLoadError(true)
+    } finally {
+      setLoadingModal(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -916,8 +914,17 @@ export default function SalesView() {
     // 'arriving' needs no extra filter — portFiltered already handles selectedPorts
     if (activeFilter === 'callOverdue') list = list.filter(v => v.cert_status === 'expired' || v.cert_status === 'critical')
     if (activeFilter === 'newLeads')    list = list.filter(v => (v.relationship || '').toLowerCase() === 'prospect')
+    if (sortBy === 'eta') list = [...list].sort((a, b) => {
+      if (!a.eta && !b.eta) return 0
+      if (!a.eta) return 1
+      if (!b.eta) return -1
+      return new Date(a.eta) - new Date(b.eta)
+    })
+    if (sortBy === 'destination') list = [...list].sort((a, b) =>
+      (a.destination || '').localeCompare(b.destination || '')
+    )
     return list
-  }, [portFiltered, certFilter, activeFilter, timeFilter, selectedPorts])
+  }, [portFiltered, certFilter, activeFilter, timeFilter, selectedPorts, sortBy])
 
   // Tab counts
   const counts = useMemo(() => {
@@ -1019,6 +1026,14 @@ export default function SalesView() {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-0 border border-border rounded-lg overflow-hidden text-xs">
+            {[['default','Default'],['eta','By ETA'],['destination','By Dest']].map(([k,l]) => (
+              <button key={k} onClick={() => setSortBy(k)}
+                className={`px-3 py-1.5 font-semibold transition-colors ${sortBy === k ? 'bg-[#0B7C6E] text-white' : 'text-muted-foreground hover:bg-secondary'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Vessel list */}
@@ -1045,8 +1060,9 @@ export default function SalesView() {
       {selectedVessel && (
         <VesselModal
           vessel={selectedVessel}
-          onClose={() => { setSelectedVessel(null); setLoadingModal(false) }}
+          onClose={() => { setSelectedVessel(null); setLoadingModal(false); setCertLoadError(false) }}
           loadingCerts={loadingModal}
+          certLoadError={certLoadError}
         />
       )}
     </div>
