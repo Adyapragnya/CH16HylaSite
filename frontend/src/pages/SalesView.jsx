@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle, PanelLeftClose, PanelLeftOpen, Filter } from 'lucide-react'
 import { vesselAPI, eventAPI } from '../lib/api'
 import { toast } from 'sonner'
 import { certDays, worstCertStatus, fmtDate, fmtETA, deriveSurveys, generateCertNo } from '../lib/utils'
@@ -614,7 +614,7 @@ function FilterSelect({ label, value, onChange, options, placeholder }) {
 function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFilter,
   managerFilter, setManagerFilter, ownerFilter, setOwnerFilter,
   classSocietyFilter, setClassSocietyFilter, shipTypeFilter, setShipTypeFilter, counts,
-  collapsed, onToggle }) {
+  collapsed, onToggle, mobileDrawer, onMobileClose }) {
   const [openRegions, setOpenRegions] = useState({ 'INDIA': true, 'MIDDLE EAST': true, 'ASIA': false, 'OTHER': false })
 
   const portCounts = useMemo(() => {
@@ -668,25 +668,36 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
     { label: 'New Leads',      value: counts?.newLeads    ?? 0, icon: UserPlus,      iconCls: 'text-purple-500' },
   ]
 
+  const isExpanded = mobileDrawer || !collapsed
   return (
-    <div className={`${collapsed ? 'w-12' : 'w-56'} shrink-0 border-r border-border bg-card flex flex-col overflow-hidden transition-[width] duration-200`}>
+    <div className={
+      mobileDrawer
+        ? 'flex h-full flex-col overflow-hidden bg-card'
+        : `${collapsed ? 'w-12' : 'w-56'} hidden md:flex shrink-0 border-r border-border bg-card flex-col overflow-hidden transition-[width] duration-200`
+    }>
       {/* Toggle header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-        {!collapsed && (
+        {isExpanded && (
           <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             <Ship size={13} className="text-[#0B7C6E]" />Filters
           </div>
         )}
-        <button
-          type="button"
-          onClick={onToggle}
-          className={`flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? 'mx-auto' : 'ml-auto'}`}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
-        </button>
+        {mobileDrawer ? (
+          <button type="button" onClick={onMobileClose} className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
+            <X size={15} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            className={`flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? 'mx-auto' : 'ml-auto'}`}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+          </button>
+        )}
       </div>
-      {collapsed ? (
+      {!isExpanded ? (
         <div className="flex flex-col items-center gap-3 py-4">
           <ShieldCheck size={16} className="text-[#0B7C6E]" />
           <AlertTriangle size={16} className="text-amber-500" />
@@ -768,7 +779,7 @@ function PriorityPanel({ vessels, events }) {
   const priority = vessels.filter(v => v.cert_status && v.cert_status !== 'valid' && v.cert_status !== 'none').slice(0, 6)
 
   return (
-    <div className="w-72 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
+    <div className="hidden w-72 shrink-0 border-l border-border bg-card md:flex flex-col overflow-y-auto">
       {/* Priority calls */}
       <div className="p-3 border-b border-border">
         <div className="flex items-center gap-2 mb-3">
@@ -841,6 +852,7 @@ export default function SalesView() {
   const [loading,             setLoading]             = useState(true)
   const [selectedPorts,       setSelectedPorts]       = useState(new Set())
   const [leftCollapsed,       setLeftCollapsed]       = useState(false)
+  const [filterDrawerOpen,    setFilterDrawerOpen]    = useState(false)
   const [certFilter,          setCertFilter]          = useState('all')
   const [activeFilter,        setActiveFilter]        = useState('arriving')
   const [timeFilter,          setTimeFilter]          = useState('7d')
@@ -927,6 +939,32 @@ export default function SalesView() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden bg-background">
+
+      {/* Mobile filter drawer */}
+      {filterDrawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setFilterDrawerOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-xl">
+            <PortSidebar
+              vessels={vessels}
+              selectedPorts={selectedPorts}
+              togglePort={togglePort}
+              certFilter={certFilter}
+              setCertFilter={setCertFilter}
+              managerFilter={managerFilter}       setManagerFilter={setManagerFilter}
+              ownerFilter={ownerFilter}           setOwnerFilter={setOwnerFilter}
+              classSocietyFilter={classSocietyFilter} setClassSocietyFilter={setClassSocietyFilter}
+              shipTypeFilter={shipTypeFilter}     setShipTypeFilter={setShipTypeFilter}
+              counts={counts}
+              collapsed={false}
+              onToggle={() => {}}
+              mobileDrawer={true}
+              onMobileClose={() => setFilterDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Left sidebar */}
       <PortSidebar
         vessels={vessels}
@@ -948,6 +986,14 @@ export default function SalesView() {
         {/* Filter bar */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-card shrink-0 flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Mobile filter button */}
+            <button
+              type="button"
+              onClick={() => setFilterDrawerOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-secondary md:hidden"
+            >
+              <Filter size={12} />Filters
+            </button>
             {[
               { key:'arriving',    label:'Arriving',    count: counts.arriving,    icon: Ship },
               { key:'callOverdue', label:'Call Overdue', count: counts.callOverdue, icon: AlertTriangle },
