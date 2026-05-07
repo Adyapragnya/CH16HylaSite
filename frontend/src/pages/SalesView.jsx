@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle } from 'lucide-react'
+import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { vesselAPI, eventAPI } from '../lib/api'
 import { toast } from 'sonner'
 import { certDays, worstCertStatus, fmtDate, fmtETA, deriveSurveys, generateCertNo } from '../lib/utils'
@@ -613,7 +613,8 @@ function FilterSelect({ label, value, onChange, options, placeholder }) {
 
 function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFilter,
   managerFilter, setManagerFilter, ownerFilter, setOwnerFilter,
-  classSocietyFilter, setClassSocietyFilter, shipTypeFilter, setShipTypeFilter, counts }) {
+  classSocietyFilter, setClassSocietyFilter, shipTypeFilter, setShipTypeFilter, counts,
+  collapsed, onToggle }) {
   const [openRegions, setOpenRegions] = useState({ 'INDIA': true, 'MIDDLE EAST': true, 'ASIA': false, 'OTHER': false })
 
   const portCounts = useMemo(() => {
@@ -668,7 +669,31 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
   ]
 
   return (
-    <div className="w-56 shrink-0 border-r border-border bg-card flex flex-col overflow-y-auto">
+    <div className={`${collapsed ? 'w-12' : 'w-56'} shrink-0 border-r border-border bg-card flex flex-col overflow-hidden transition-[width] duration-200`}>
+      {/* Toggle header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+        {!collapsed && (
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Ship size={13} className="text-[#0B7C6E]" />Filters
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? 'mx-auto' : 'ml-auto'}`}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+        </button>
+      </div>
+      {collapsed ? (
+        <div className="flex flex-col items-center gap-3 py-4">
+          <ShieldCheck size={16} className="text-[#0B7C6E]" />
+          <AlertTriangle size={16} className="text-amber-500" />
+          <FileText size={16} className="text-muted-foreground" />
+        </div>
+      ) : (
+      <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Port tree */}
       <div className="p-3 border-b border-border">
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ports</div>
@@ -732,6 +757,8 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
           </div>
         ))}
       </div>
+      </div>
+      )}
     </div>
   )
 }
@@ -813,6 +840,7 @@ export default function SalesView() {
   const [events,              setEvents]              = useState([])
   const [loading,             setLoading]             = useState(true)
   const [selectedPorts,       setSelectedPorts]       = useState(new Set())
+  const [leftCollapsed,       setLeftCollapsed]       = useState(false)
   const [certFilter,          setCertFilter]          = useState('all')
   const [activeFilter,        setActiveFilter]        = useState('arriving')
   const [timeFilter,          setTimeFilter]          = useState('7d')
@@ -911,6 +939,8 @@ export default function SalesView() {
         classSocietyFilter={classSocietyFilter} setClassSocietyFilter={setClassSocietyFilter}
         shipTypeFilter={shipTypeFilter}     setShipTypeFilter={setShipTypeFilter}
         counts={counts}
+        collapsed={leftCollapsed}
+        onToggle={() => setLeftCollapsed(v => !v)}
       />
 
       {/* Center: feed */}
