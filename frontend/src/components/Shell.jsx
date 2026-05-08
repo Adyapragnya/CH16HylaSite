@@ -101,7 +101,6 @@ export default function Shell() {
               {[
                 { id: 'sales',      label: 'SALES',      active: 'bg-[#0B7C6E] text-white shadow-md' },
                 { id: 'ops',        label: 'OPS',        active: 'bg-[#0FA390] text-black shadow-md' },
-                { id: 'compliance', label: 'COMPLIANCE', active: 'bg-[#0B7C6E] text-white shadow-md' },
               ].map(t => (
                 <button
                   key={t.id}

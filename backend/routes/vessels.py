@@ -217,4 +217,10 @@ async def get_vessel_certificates(imo: str, _=Depends(get_current_user)):
     doc = await col.find_one({'imo': imo}, {'certificates': 1, 'imo': 1, 'name': 1})
     if not doc:
         raise HTTPException(status_code=404, detail='Vessel not found')
-    return {'imo': imo, 'certificates': _sanitize(doc.get('certificates', []))}
+    certs = doc.get('certificates') or []
+    if not certs:
+        # primary collection has no certs — try scrapper_data as fallback
+        scrapper = await get_scrapper_col().find_one({'imo': imo}, {'certificates': 1})
+        if scrapper:
+            certs = scrapper.get('certificates') or []
+    return {'imo': imo, 'certificates': _sanitize(certs)}
