@@ -29,7 +29,7 @@ function CertRow({ cert, index }) {
   return (
     <tr>
       <td style={{ fontWeight:500, color:'#111827', fontSize:'0.875rem' }}>
-        {cert.cert_type || cert.certType || cert.CertType || cert.type || cert.name || `Certificate ${index+1}`}
+        {cert.cert_type || cert.certType || cert.CertType || cert.type || cert.name || cert.certificate_name || `Certificate ${index+1}`}
       </td>
       <td><span style={{ fontSize:'0.8rem', color:'#6b7280' }}>{cert.cert_no || cert.certNo || '—'}</span></td>
       <td><span style={{ fontSize:'0.8rem', color:'#6b7280' }}>{expDate ? new Date(expDate).toLocaleDateString() : '—'}</span></td>
@@ -39,7 +39,7 @@ function CertRow({ cert, index }) {
           {label}
         </span>
       </td>
-      <td><span style={{ fontSize:'0.8rem', color:'#6b7280' }}>{cert.issuing_authority || cert.issuingAuthority || cert.IssuingAuthority || '—'}</span></td>
+      <td><span style={{ fontSize:'0.8rem', color:'#6b7280' }}>{cert.issuing_authority || cert.issuingAuthority || cert.IssuingAuthority || cert.issuing_office || '—'}</span></td>
     </tr>
   )
 }
@@ -167,8 +167,9 @@ export default function VesselDetailPage() {
             <h3 style={{ fontSize:'0.875rem', fontWeight:700, color:'#111827', marginBottom:'0.75rem' }}>Ownership</h3>
             <DetailRow label="Ship Owner"    value={vessel.ship_owner} />
             <DetailRow label="Ship Manager"  value={vessel.ship_manager} />
-            <DetailRow label="Port"          value={vessel.port} />
-            <DetailRow label="Berth"         value={vessel.berth} />
+            <DetailRow label="Port"              value={vessel.port} />
+            <DetailRow label="Port of Registry" value={vessel.port_of_registry} />
+            <DetailRow label="Berth"             value={vessel.berth} />
             <DetailRow label="Service Types" value={(vessel.service_types || []).join(', ') || null} />
           </div>
 

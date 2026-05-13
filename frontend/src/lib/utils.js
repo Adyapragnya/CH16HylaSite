@@ -70,13 +70,13 @@ export function deriveSurveys(certs = []) {
   ]
   const surveys = [], seen = new Set()
   certs.forEach(c => {
-    const t = (c.type || c.cert_type || '').toUpperCase()
-    const n = (c.name || '').toUpperCase()
+    const t = (c.type || c.cert_type || c.certificate_name || '').toUpperCase()
+    const n = (c.name || c.certificate_name || '').toUpperCase()
     let mapped = null
     for (const [key, val] of Object.entries(SURVEY_MAP)) {
       if (t.includes(key) || n.includes(key)) { mapped = val; break }
     }
-    if (!mapped) mapped = { name: (c.name || '').replace(/certificate/i, 'Survey').trim() || 'Survey', category: c.category || 'Statutory' }
+    if (!mapped) mapped = { name: (c.name || c.certificate_name || '').replace(/certificate/i, 'Survey').trim() || 'Survey', category: c.category || 'Statutory' }
     if (seen.has(mapped.name)) return
     seen.add(mapped.name)
     const days   = certDays(c)

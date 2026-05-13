@@ -368,25 +368,33 @@ async def sync_scrapper_to_vessels():
         doc.pop("_id", None)
 
         certs  = doc.get("certificates", [])
+
+        # Extract port_registry from ABS enrichment as fallback port identifier
+        _enrichment = doc.get("enrichment") or {}
+        _raw        = _enrichment.get("raw") or {}
+        _abs_id     = _raw.get("abs_identification") or {}
+        port_registry = _abs_id.get("port_registry") or None
+
         vessel = {
             "imo":              imo,
-            "name":             doc.get("name"),
+            "name":             doc.get("name") or doc.get("vessel_name"),
             "callsign":         doc.get("callsign"),
             "mmsi":             doc.get("mmsi"),
-            "flag":             doc.get("flag"),
-            "vessel_type":      doc.get("vessel_type") or doc.get("spire_type"),
+            "flag":             doc.get("flag") or doc.get("current_flag"),
+            "vessel_type":      doc.get("vessel_type") or doc.get("ship_type") or doc.get("spire_type"),
             "spire_type":       doc.get("spire_type"),
             "gross_tonnage":    doc.get("gross_tonnage"),
             "dwt":              doc.get("dwt"),
             "loa":              doc.get("loa"),
             "beam":             doc.get("beam"),
             "max_draft":        doc.get("max_draft"),
-            "year_built":       doc.get("year_built"),
+            "year_built":       doc.get("year_built") or doc.get("year_of_build"),
             "ship_manager":     doc.get("ship_manager"),
             "ship_owner":       doc.get("ship_owner"),
-            "class_society":    doc.get("class_society"),
+            "class_society":    doc.get("class_society") or doc.get("current_class"),
             "class_status":     doc.get("class_status"),
             "class_notation":   doc.get("class_notation"),
+            "port_of_registry": port_registry,
             "certificates":     certs,
             "min_cert_days":    _min_cert_days(certs),
             **_cert_extras(certs),          # cert_status, lsa_days, ffa_days
