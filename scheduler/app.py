@@ -340,7 +340,7 @@ def sync_source_vessels():
             scrapper_count += 1
 
             certs = source_doc.get('certificates', [])
-            dst_vessels.update_one({'imo': imo}, {'$set': _compact({
+            vessel_update = _compact({
                 'imo':            imo,
                 'name':           source_doc.get('name'),
                 'callsign':       source_doc.get('callsign'),
@@ -359,13 +359,17 @@ def sync_source_vessels():
                 'class_society':  source_doc.get('class_society'),
                 'class_status':   source_doc.get('class_status'),
                 'class_notation': source_doc.get('class_notation'),
-                'certificates':   certs,
-                'min_cert_days':  _min_cert_days(certs),
-                **_cert_extras(certs),
                 'scraped_at':     source_doc.get('scraped_at'),
                 'source':         'scrapper_data',
                 'synced_at':      _now(),
-            })}, upsert=True)
+            })
+            # Only overwrite certificates if ScrapperData has them —
+            # preserves certs imported from external sources (e.g. client JSON).
+            if certs:
+                vessel_update['certificates']  = certs
+                vessel_update['min_cert_days'] = _min_cert_days(certs)
+                vessel_update.update(_cert_extras(certs))
+            dst_vessels.update_one({'imo': imo}, {'$set': vessel_update}, upsert=True)
             vessel_count += 1
 
         # HylaTrial.vessel_master -> enrich already scraped vessels only
