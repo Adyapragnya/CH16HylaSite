@@ -386,11 +386,11 @@ function VesselCard({ vessel, onClick }) {
       {/* Row 3: Live location block */}
       {(vessel.port || vessel.eta || vessel.lat || vessel.geofence_name) && (
         <div className="mb-2 space-y-1.5">
-          {/* AT PORT highlight — only when geofence confirmed Inside */}
+          {/* AT PORT — geofence Inside */}
           {vessel.geofence_flag === 'Inside' && vessel.port && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0B7C6E]/10 border border-[#0B7C6E]/30 text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0B7C6E] shrink-0" />
-              <span className="font-bold text-[#0B7C6E] uppercase tracking-wide text-[9px]">AT PORT</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0B7C6E] animate-pulse shrink-0" />
+              <span className="font-bold text-[#0B7C6E] uppercase tracking-wide text-[9px]">IN PORT</span>
               <span className="font-bold text-[#0B7C6E]">{vessel.port}</span>
               {vessel.berth && <span className="text-muted-foreground">· Berth {vessel.berth}</span>}
               {vessel.terminal && <span className="text-muted-foreground">· {vessel.terminal}</span>}
@@ -399,6 +399,14 @@ function VesselCard({ vessel, onClick }) {
                   since {new Date(vessel.geofence_entry).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
                 </span>
               )}
+            </div>
+          )}
+          {/* LEFT PORT — geofence Outside but port still known */}
+          {vessel.geofence_flag !== 'Inside' && vessel.port && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100/80 border border-gray-200 text-[10px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+              <span className="font-bold text-gray-500 uppercase tracking-wide text-[9px]">LEFT PORT</span>
+              <span className="font-semibold text-gray-600">{vessel.port}</span>
             </div>
           )}
           {/* Badge row */}
@@ -521,7 +529,12 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
 
   const portCounts = useMemo(() => {
     const c = {}
-    vessels.filter(v => v.geofence_flag === 'Inside').forEach(v => { if (v.port) c[v.port] = (c[v.port] || 0) + 1 })
+    vessels.forEach(v => {
+      if (!v.port) return
+      if (!c[v.port]) c[v.port] = { inside: 0, outside: 0 }
+      if (v.geofence_flag === 'Inside') c[v.port].inside++
+      else c[v.port].outside++
+    })
     return c
   }, [vessels])
 
@@ -531,8 +544,9 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
       const region = portToRegion(port) || 'OTHER'
       groups[region].push(port)
     })
+    const total = p => (portCounts[p]?.inside || 0) + (portCounts[p]?.outside || 0)
     Object.keys(groups).forEach(r => {
-      groups[r].sort((a, b) => (portCounts[b] || 0) - (portCounts[a] || 0))
+      groups[r].sort((a, b) => total(b) - total(a))
     })
     return groups
   }, [portCounts])
@@ -612,7 +626,7 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ports</div>
         {Object.entries(regionGroups).map(([region, ports]) => {
           if (!ports.length) return null
-          const regionTotal = ports.reduce((a, p) => a + (portCounts[p] || 0), 0)
+          const regionTotal = ports.reduce((a, p) => a + (portCounts[p]?.inside || 0) + (portCounts[p]?.outside || 0), 0)
           return (
             <div key={region} className="mb-1">
               <button onClick={() => toggleRegion(region)} className="flex items-center justify-between w-full text-left py-1 group">
@@ -626,7 +640,10 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
                 <label key={port} className="flex items-center gap-2 py-0.5 pl-4 cursor-pointer hover:text-[#0B7C6E] group">
                   <input type="checkbox" className="w-3 h-3 accent-[#0B7C6E]" checked={selectedPorts.has(port)} onChange={() => togglePort(port)} />
                   <span className="text-[11px] text-foreground group-hover:text-[#0B7C6E] flex-1 truncate">{port}</span>
-                  <span className="text-[10px] text-muted-foreground shrink-0">({portCounts[port]})</span>
+                  <span className="flex items-center gap-1 shrink-0">
+                    {(portCounts[port]?.inside || 0) > 0 && <span className="text-[9px] font-bold text-emerald-600">{portCounts[port].inside}IN</span>}
+                    {(portCounts[port]?.outside || 0) > 0 && <span className="text-[9px] font-semibold text-muted-foreground">{portCounts[port].outside}OUT</span>}
+                  </span>
                 </label>
               ))}
             </div>
@@ -802,7 +819,7 @@ export default function SalesView() {
   // Port + dropdown + search filtered base list
   const portFiltered = useMemo(() => {
     let list = vessels
-    if (selectedPorts.size)    list = list.filter(v => v.geofence_flag === 'Inside' && selectedPorts.has(v.port))
+    if (selectedPorts.size)    list = list.filter(v => v.port && selectedPorts.has(v.port))
     if (managerFilter)         list = list.filter(v => v.ship_manager === managerFilter)
     if (ownerFilter)           list = list.filter(v => v.ship_owner === ownerFilter)
     if (classSocietyFilter)    list = list.filter(v => v.class_society === classSocietyFilter)
