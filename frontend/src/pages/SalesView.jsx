@@ -521,7 +521,7 @@ function FilterSelect({ label, value, onChange, options, placeholder }) {
   )
 }
 
-function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFilter,
+function PortSidebar({ vessels, selectedPorts, togglePort, selectedDestinations, toggleDestination, certFilter, setCertFilter,
   managerFilter, setManagerFilter, ownerFilter, setOwnerFilter,
   classSocietyFilter, setClassSocietyFilter, shipTypeFilter, setShipTypeFilter, counts,
   collapsed, onToggle, mobileDrawer, onMobileClose }) {
@@ -675,10 +675,11 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
             <span className="text-[10px] text-muted-foreground">{atSeaGroups.reduce((a, [, n]) => a + n, 0)}</span>
           </button>
           {openAtSea && atSeaGroups.map(([dest, count]) => (
-            <div key={dest} className="flex items-center justify-between py-0.5 pl-4">
-              <span className="text-[11px] text-muted-foreground truncate flex-1">{dest}</span>
+            <label key={dest} className="flex items-center gap-2 py-0.5 pl-4 cursor-pointer hover:text-[#0B7C6E] group">
+              <input type="checkbox" className="w-3 h-3 accent-[#0B7C6E]" checked={selectedDestinations.has(dest)} onChange={() => toggleDestination(dest)} />
+              <span className="text-[11px] text-foreground group-hover:text-[#0B7C6E] flex-1 truncate">{dest}</span>
               <span className="text-[10px] text-muted-foreground shrink-0">{count}</span>
-            </div>
+            </label>
           ))}
         </div>
       )}
@@ -802,6 +803,7 @@ export default function SalesView() {
   const [events,              setEvents]              = useState([])
   const [loading,             setLoading]             = useState(true)
   const [selectedPorts,       setSelectedPorts]       = useState(new Set())
+  const [selectedDestinations,setSelectedDestinations]= useState(new Set())
   const [leftCollapsed,       setLeftCollapsed]       = useState(false)
   const [filterDrawerOpen,    setFilterDrawerOpen]    = useState(false)
   const [sortBy,              setSortBy]              = useState('default') // 'default'|'eta'|'destination'
@@ -848,10 +850,18 @@ export default function SalesView() {
   const togglePort = port =>
     setSelectedPorts(prev => { const n = new Set(prev); n.has(port) ? n.delete(port) : n.add(port); return n })
 
+  const toggleDestination = dest =>
+    setSelectedDestinations(prev => { const n = new Set(prev); n.has(dest) ? n.delete(dest) : n.add(dest); return n })
+
   // Port + dropdown + search filtered base list
   const portFiltered = useMemo(() => {
     let list = vessels
-    if (selectedPorts.size)    list = list.filter(v => v.port && selectedPorts.has(v.port))
+    if (selectedPorts.size || selectedDestinations.size) {
+      list = list.filter(v =>
+        (selectedPorts.size       && v.port        && selectedPorts.has(v.port)) ||
+        (selectedDestinations.size && !v.port       && selectedDestinations.has(v.destination || 'Unknown Destination'))
+      )
+    }
     if (managerFilter)         list = list.filter(v => v.ship_manager === managerFilter)
     if (ownerFilter)           list = list.filter(v => v.ship_owner === ownerFilter)
     if (classSocietyFilter)    list = list.filter(v => v.class_society === classSocietyFilter)
@@ -864,7 +874,7 @@ export default function SalesView() {
       )
     }
     return list
-  }, [vessels, selectedPorts, managerFilter, ownerFilter, classSocietyFilter, shipTypeFilter, searchQuery])
+  }, [vessels, selectedPorts, selectedDestinations, managerFilter, ownerFilter, classSocietyFilter, shipTypeFilter, searchQuery])
 
   // Tab + cert filter
   const filtered = useMemo(() => {
@@ -935,6 +945,8 @@ export default function SalesView() {
               vessels={vessels}
               selectedPorts={selectedPorts}
               togglePort={togglePort}
+              selectedDestinations={selectedDestinations}
+              toggleDestination={toggleDestination}
               certFilter={certFilter}
               setCertFilter={setCertFilter}
               managerFilter={managerFilter}       setManagerFilter={setManagerFilter}
@@ -956,6 +968,8 @@ export default function SalesView() {
         vessels={vessels}
         selectedPorts={selectedPorts}
         togglePort={togglePort}
+        selectedDestinations={selectedDestinations}
+        toggleDestination={toggleDestination}
         certFilter={certFilter}
         setCertFilter={setCertFilter}
         managerFilter={managerFilter}       setManagerFilter={setManagerFilter}
