@@ -395,13 +395,16 @@ async def sync_scrapper_to_vessels():
             "class_status":     doc.get("class_status"),
             "class_notation":   doc.get("class_notation"),
             "port_of_registry": port_registry,
-            "certificates":     certs,
-            "min_cert_days":    _min_cert_days(certs),
-            **_cert_extras(certs),          # cert_status, lsa_days, ffa_days
             "source":           "scrapper_data",
             "scraped_at":       doc.get("scraped_at"),
             "synced_at":        _now(),
         }
+        # Only overwrite certificates if ScrapperData actually has them —
+        # otherwise the sync wipes certs imported from external sources (e.g. client JSON).
+        if certs:
+            vessel["certificates"]  = certs
+            vessel["min_cert_days"] = _min_cert_days(certs)
+            vessel.update(_cert_extras(certs))
         vessel = _compact(vessel)
         ops.append(UpdateOne({"imo": imo}, {"$set": vessel}, upsert=True))
         count += 1
