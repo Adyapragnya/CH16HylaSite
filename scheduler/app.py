@@ -34,6 +34,11 @@ SCHEDULER_PORT  = int(os.getenv('SCHEDULER_PORT', 5001))
 # Batch size: how many IMOs to pack into one /events call
 EVENT_BATCH = 50
 
+# Fields owned by the cert import pipeline (moloobhoy / ABS data).
+# Sync functions must NEVER include these in a $set unless they have fresh cert data —
+# doing so would silently erase 30 000+ certs imported from the client JSON.
+_CERT_FIELDS = frozenset({'certificates', 'min_cert_days', 'cert_status', 'lsa_days', 'ffa_days'})
+
 
 def _min_cert_days(certificates):
     """Return smallest days-to-expiry across certs; None if no data."""
@@ -340,7 +345,9 @@ def sync_source_vessels():
             scrapper_count += 1
 
             certs = source_doc.get('certificates', [])
-            vessel_update = _compact({
+            # Strip _CERT_FIELDS from base update — owned by the cert import pipeline,
+            # must never be overwritten with empty data from scrapper_data.
+            vessel_update = _compact({k: v for k, v in {
                 'imo':            imo,
                 'name':           source_doc.get('name'),
                 'callsign':       source_doc.get('callsign'),
@@ -362,9 +369,7 @@ def sync_source_vessels():
                 'scraped_at':     source_doc.get('scraped_at'),
                 'source':         'scrapper_data',
                 'synced_at':      _now(),
-            })
-            # Only overwrite certificates if ScrapperData has them —
-            # preserves certs imported from external sources (e.g. client JSON).
+            }.items() if k not in _CERT_FIELDS})
             if certs:
                 vessel_update['certificates']  = certs
                 vessel_update['min_cert_days'] = _min_cert_days(certs)
@@ -401,7 +406,8 @@ def sync_source_vessels():
                 continue
 
             certs = doc.get('certificates', [])
-            update = {
+            # Strip _CERT_FIELDS from base update — owned by the cert import pipeline.
+            update = _compact({k: v for k, v in {
                 'imo':           imo,
                 'name':          doc.get('name'),
                 'mmsi':          doc.get('mmsi'),
@@ -418,7 +424,7 @@ def sync_source_vessels():
                 'etd':           str(doc.get('etd', '')) if doc.get('etd') is not None else None,
                 'service_types': doc.get('service_types', []),
                 'synced_at':     _now(),
-            }
+            }.items() if k not in _CERT_FIELDS})
             if certs:
                 update['certificates'] = certs
                 update['min_cert_days'] = _min_cert_days(certs)

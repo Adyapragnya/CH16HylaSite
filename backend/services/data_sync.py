@@ -68,6 +68,11 @@ def _doc_rank(doc: dict, preferred_source: str | None = None) -> tuple[int, int,
 _LSA_KW = {'LSA', 'LSAF', 'LIFE SAVING', 'LIFESAVING', 'LIFE-SAVING'}
 _FFA_KW = {'FFA', 'FFAF', 'FIRE FIGHT', 'FIREFIGHT', 'FIRE FIGHTING', 'FIREFIGHTING', 'FIRE-FIGHT'}
 
+# Fields owned by the cert import pipeline (moloobhoy / ABS data).
+# Sync functions must NEVER include these in a $set unless they have fresh cert data —
+# doing so would silently erase 30 000+ certs imported from the client JSON.
+_CERT_FIELDS = frozenset({'certificates', 'min_cert_days', 'cert_status', 'lsa_days', 'ffa_days'})
+
 
 def _min_cert_days(certificates: list) -> int | None:
     """Return the smallest days-to-expiry across all certs; None if no dates."""
@@ -320,17 +325,14 @@ async def sync_hyla_vessels(scraped_imos: set[str] | None = None):
             "vessel_type":  doc.get("vessel_type"),
             "synced_at":    _now(),
         }
-        # Only overwrite certificate data if this source actually has it.
-        # HylaAnalytics2 is primarily for metadata/AIS — ScrapperData is the
-        # authoritative source for certificates. Blindly setting certificates:[]
-        # here would erase certs written by sync_scrapper_to_vessels().
+        # Build update without cert fields — _CERT_FIELDS are owned by the
+        # cert import pipeline and must never be overwritten with empty data.
+        vessel = _compact({k: v for k, v in vessel.items() if k not in _CERT_FIELDS})
         certs = doc.get("certificates") or []
         if certs:
             vessel["certificates"]  = certs
             vessel["min_cert_days"] = _min_cert_days(certs)
-            vessel.update(_cert_extras(certs))   # cert_status, lsa_days, ffa_days
-
-        vessel = _compact(vessel)
+            vessel.update(_cert_extras(certs))
         ops.append(UpdateOne({"imo": imo}, {"$set": vessel}))
         count += 1
         if len(ops) >= batch_size:
@@ -399,13 +401,13 @@ async def sync_scrapper_to_vessels():
             "scraped_at":       doc.get("scraped_at"),
             "synced_at":        _now(),
         }
-        # Only overwrite certificates if ScrapperData actually has them —
-        # otherwise the sync wipes certs imported from external sources (e.g. client JSON).
+        # Strip _CERT_FIELDS from base update — they're owned by the cert import
+        # pipeline and must never be replaced with empty data from scrapper_data.
+        vessel = _compact({k: v for k, v in vessel.items() if k not in _CERT_FIELDS})
         if certs:
             vessel["certificates"]  = certs
             vessel["min_cert_days"] = _min_cert_days(certs)
             vessel.update(_cert_extras(certs))
-        vessel = _compact(vessel)
         ops.append(UpdateOne({"imo": imo}, {"$set": vessel}, upsert=True))
         count += 1
         if len(ops) >= batch_size:
