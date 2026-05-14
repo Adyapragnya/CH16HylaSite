@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle, PanelLeftClose, PanelLeftOpen, Filter } from 'lucide-react'
+import { Phone, FileText, UserPlus, StickyNote, MapPin, Clock, ChevronDown, ChevronRight, AlertTriangle, Activity, X, Ship, ShieldCheck, ShieldX, ShieldAlert, XCircle, PanelLeftClose, PanelLeftOpen, Filter, Search } from 'lucide-react'
 import { vesselAPI, eventAPI } from '../lib/api'
 import { toast } from 'sonner'
 import { certDays, worstCertStatus, fmtDate, fmtETA, deriveSurveys, generateCertNo } from '../lib/utils'
@@ -766,6 +766,7 @@ export default function SalesView() {
   const [ownerFilter,         setOwnerFilter]         = useState('')
   const [classSocietyFilter,  setClassSocietyFilter]  = useState('')
   const [shipTypeFilter,      setShipTypeFilter]      = useState('')
+  const [searchQuery,         setSearchQuery]         = useState('')
 
   // Open modal immediately with list data, then fetch full certificates
   const openVesselModal = useCallback(async (v) => {
@@ -798,7 +799,7 @@ export default function SalesView() {
   const togglePort = port =>
     setSelectedPorts(prev => { const n = new Set(prev); n.has(port) ? n.delete(port) : n.add(port); return n })
 
-  // Port + dropdown filtered base list
+  // Port + dropdown + search filtered base list
   const portFiltered = useMemo(() => {
     let list = vessels
     if (selectedPorts.size)    list = list.filter(v => v.geofence_flag === 'Inside' && selectedPorts.has(v.port))
@@ -806,8 +807,15 @@ export default function SalesView() {
     if (ownerFilter)           list = list.filter(v => v.ship_owner === ownerFilter)
     if (classSocietyFilter)    list = list.filter(v => v.class_society === classSocietyFilter)
     if (shipTypeFilter)        list = list.filter(v => (v.vessel_type || v.spire_type) === shipTypeFilter)
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      list = list.filter(v =>
+        (v.name || '').toLowerCase().includes(q) ||
+        (v.imo  || '').toLowerCase().includes(q)
+      )
+    }
     return list
-  }, [vessels, selectedPorts, managerFilter, ownerFilter, classSocietyFilter, shipTypeFilter])
+  }, [vessels, selectedPorts, managerFilter, ownerFilter, classSocietyFilter, shipTypeFilter, searchQuery])
 
   // Tab + cert filter
   const filtered = useMemo(() => {
@@ -833,6 +841,18 @@ export default function SalesView() {
     if (sortBy === 'destination') list = [...list].sort((a, b) =>
       (a.destination || '').localeCompare(b.destination || '')
     )
+    if (sortBy === 'certs') {
+      const rank = { expired: 0, critical: 1, warning: 2, valid: 3, none: 4 }
+      list = [...list].sort((a, b) => {
+        const ra = rank[a.cert_status] ?? 4
+        const rb = rank[b.cert_status] ?? 4
+        if (ra !== rb) return ra - rb
+        // within same status, sort by min_cert_days ascending
+        const da = a.min_cert_days ?? Infinity
+        const db = b.min_cert_days ?? Infinity
+        return da - db
+      })
+    }
     return list
   }, [portFiltered, certFilter, activeFilter, timeFilter, selectedPorts, sortBy])
 
@@ -902,6 +922,17 @@ export default function SalesView() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Filter bar */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-card shrink-0 flex-wrap gap-2">
+          {/* Search */}
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search vessel or IMO…"
+              className="pl-7 pr-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0B7C6E]/50 w-44"
+            />
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Mobile filter button */}
             <button
@@ -937,7 +968,7 @@ export default function SalesView() {
             ))}
           </div>
           <div className="flex items-center gap-0 border border-border rounded-lg overflow-hidden text-xs">
-            {[['default','Default'],['eta','By ETA'],['destination','By Dest']].map(([k,l]) => (
+            {[['default','Default'],['eta','By ETA'],['destination','By Dest'],['certs','By Certs']].map(([k,l]) => (
               <button key={k} onClick={() => setSortBy(k)}
                 className={`px-3 py-1.5 font-semibold transition-colors ${sortBy === k ? 'bg-[#0B7C6E] text-white' : 'text-muted-foreground hover:bg-secondary'}`}>
                 {l}
