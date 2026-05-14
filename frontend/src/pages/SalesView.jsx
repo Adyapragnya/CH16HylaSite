@@ -526,6 +526,7 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
   classSocietyFilter, setClassSocietyFilter, shipTypeFilter, setShipTypeFilter, counts,
   collapsed, onToggle, mobileDrawer, onMobileClose }) {
   const [openRegions, setOpenRegions] = useState({ 'INDIA': true, 'MIDDLE EAST': true, 'ASIA': false, 'OTHER': false })
+  const [openAtSea, setOpenAtSea] = useState(false)
 
   const portCounts = useMemo(() => {
     const c = {}
@@ -536,6 +537,18 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
       else c[v.port].outside++
     })
     return c
+  }, [vessels])
+
+  // Vessels that are tracked (have position or geofence data) but not currently at a port
+  const atSeaGroups = useMemo(() => {
+    const destCounts = {}
+    vessels.forEach(v => {
+      if (v.port) return  // already shown in port list
+      if (!v.lat && !v.destination && !v.geofence_flag) return  // not tracked
+      const dest = v.destination || 'Unknown Destination'
+      destCounts[dest] = (destCounts[dest] || 0) + 1
+    })
+    return Object.entries(destCounts).sort((a, b) => b[1] - a[1])
   }, [vessels])
 
   const regionGroups = useMemo(() => {
@@ -650,6 +663,25 @@ function PortSidebar({ vessels, selectedPorts, togglePort, certFilter, setCertFi
           )
         })}
       </div>
+
+      {/* At Sea section — tracked vessels with no current port */}
+      {atSeaGroups.length > 0 && (
+        <div className="p-3 border-b border-border">
+          <button onClick={() => setOpenAtSea(p => !p)} className="flex items-center justify-between w-full text-left mb-1 group">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+              {openAtSea ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+              🌊 At Sea
+            </span>
+            <span className="text-[10px] text-muted-foreground">{atSeaGroups.reduce((a, [, n]) => a + n, 0)}</span>
+          </button>
+          {openAtSea && atSeaGroups.map(([dest, count]) => (
+            <div key={dest} className="flex items-center justify-between py-0.5 pl-4">
+              <span className="text-[11px] text-muted-foreground truncate flex-1">{dest}</span>
+              <span className="text-[10px] text-muted-foreground shrink-0">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Cert status filter */}
       <div className="p-3 border-b border-border">
